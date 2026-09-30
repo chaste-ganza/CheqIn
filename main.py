@@ -1,7 +1,13 @@
+import serial
+import time
+
+SERIAL_PORT = "COM7"
+BAUD_RATE = 115200
+
 students = {
-    "03A70B2F": "Student 1",
-    "11223344": "Student 2",
-    "A1B2C3D4": "Student 3",
+    "A96E9504": "Student 1",
+    "AB529E04": "Student 2",
+    "594AB9D4": "Student 3",
 }
 
 def identify_student(card_uid):
@@ -20,9 +26,46 @@ def identify_student(card_uid):
 
     print("-" * 35)
 
-print("RFID ATTENDANCE SYSTEM")
-print("Student identification test")
-print("-" * 35)
+try:
+    print("Connecting to RFID reader...")
 
-identify_student("03A70B2F")
-identify_student("FFFFFFFF")
+    with serial.Serial(
+        SERIAL_PORT,
+        BAUD_RATE,
+        timeout=1
+    ) as esp:
+        time.sleep(2)
+
+        esp.reset_input_buffer()
+
+        print("Connected to ESP8266!")
+        print("Sending ON command...")
+
+        esp.write(b"ON\n")
+
+        print("RFID system is starting.")
+        print("Tap an RFID card to identify a student.")
+        print("Press Ctrl+C to stop.\n")
+
+        while True:
+
+            line = esp.readline().decode(
+                "utf-8", errors="ignore"
+            ).strip()
+
+            if not line:
+                continue
+            print(f"[ESP8266] {line}")
+
+            if line.startswith("UID:"):
+                card_uid = line.split(":", 1)[1].strip()
+
+                identify_student(card_uid)
+
+except serial.SerialException as error:
+    print("\nCould not connect to the ESP8266.")
+    print("Check the COM port and USB connection.")
+    print(f"Details: {error}")
+
+except KeyboardInterrupt:
+    print("\nRFID application stopped")
