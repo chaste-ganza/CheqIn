@@ -1,8 +1,13 @@
 import serial
 import time
+import csv
+import os
+from datetime import datetime
 
 SERIAL_PORT = "COM7"
 BAUD_RATE = 115200
+
+ATTENDANCE_FILE = "attendance.csv"
 
 students = {
     "A96E9504": "Student 1",
@@ -10,62 +15,97 @@ students = {
     "594AB9D4": "Student 3",
 }
 
+def create_attendance_file():
+
+    if not os.path.exists(ATTENDANCE_FILE):
+        with open(ATTENDANCE_FILE, "w", newline="") as file:
+            writer = csv.writer(file)
+
+            writer.writerow([
+                "Student Name",
+                "Card UID",
+                "Date",
+                "Time"
+            ])
+        print("Attendance file created")
+
+
 def identify_student(card_uid):
     card_uid = card_uid.strip().replace(" ", "").upper()
 
-    if card_uid in students:
-        student_name = students[card_uid]
-
-        print("\nSTUDENT IDENTIFIED!")
-        print(f"Name: {student_name}")
-        print(f"Card UID: {card_uid}")
-    else:
-        print("\nUNKNOWN CARD!")
+    if card_uid not in students:
+        print("\nUNKOWN CARD!")
         print(f"Card UID: {card_uid}")
         print("This card is not registered.")
+        print("-" * 35)
+        return
 
+    student_name = students[card_uid]
+    now = datetime.now()
+
+    date = now.strftime("%Y-%m-%d")
+    time_scanned = now.strftime("%H:%M:%S")
+
+    print("\nSTUDENT IDENTIFIED!")
+    print(f"Name: {student_name}")
+    print(f"Card UID: {card_uid}")
+    print(f"Time: {time_scanned}")
+
+    with open(ATTENDANCE_FILE, "a", newline="") as file:
+        writer = csv.writer(file)
+
+        writer.writerow([
+            student_name,
+            card_uid,
+            date,
+            time_scanned
+        ])
+
+    print("Attendance recorded successfully!")
     print("-" * 35)
 
-try:
-    print("Connecting to RFID reader...")
 
-    with serial.Serial(
-        SERIAL_PORT,
-        BAUD_RATE,
-        timeout=1
-    ) as esp:
-        time.sleep(2)
+def main():
+    create_attendance_file()
 
-        esp.reset_input_buffer()
+    try:
+        print("Connnecting to RFID reader...")
 
-        print("Connected to ESP8266!")
-        print("Sending ON command...")
+        with serial.Serial(
+            SERIAL_PORT,
+            BAUD_RATE,
+            timeout=1
+        ) as esp:
+            time.sleep(2)
+            esp.reset_input_buffer()
 
-        esp.write(b"ON\n")
+            print("Connnect to ESP8266!")
+            esp.write(b"ON\n")
 
-        print("RFID system is starting.")
-        print("Tap an RFID card to identify a student.")
-        print("Press Ctrl+C to stop.\n")
+            print("RFID system is starting")
+            print("Tap a registered RFID card.")
+            print("Press Ctrl+C to stop.\n")
 
-        while True:
+            while True:
+                line = esp.readline().decode(
+                    "utf-8", errors="ignore"
+                ).strip()
 
-            line = esp.readline().decode(
-                "utf-8", errors="ignore"
-            ).strip()
+                if not line:
+                    continue
 
-            if not line:
-                continue
-            print(f"[ESP8266] {line}")
+                print(f"[ESP8266] {line}")
 
-            if line.startswith("UID:"):
-                card_uid = line.split(":", 1)[1].strip()
+                if line.startswith("UID:"):
+                    card_uid = line.split(":", 1)[1].strip()
+                    identify_student(card_uid)
+    except serial.SerialException as error:
+        print("\nCould not connect to the ESP8266.")
+        print("Check the COM port and USB connection")
+        print(f"Details: {error}")
 
-                identify_student(card_uid)
+    except KeyboardInterrupt:
+        print("\nRFID application stopped.")
 
-except serial.SerialException as error:
-    print("\nCould not connect to the ESP8266.")
-    print("Check the COM port and USB connection.")
-    print(f"Details: {error}")
-
-except KeyboardInterrupt:
-    print("\nRFID application stopped")
+if __name__ == "__main__":
+    main()
