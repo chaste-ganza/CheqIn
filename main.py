@@ -30,6 +30,23 @@ def create_attendance_file():
         print("Attendance file created")
 
 
+def already_attended(card_uid, today):
+    if not os.path.exists(ATTENDANCE_FILE):
+        return False
+
+    with open(ATTENDANCE_FILE, "r", newline="") as file:
+        reader = csv.DictReader(file)
+
+        for row in reader:
+            if (
+                row["Card UID"] == card_uid
+                and row["Date"] == today
+            ):
+                return True
+
+    return False
+
+
 def identify_student(card_uid):
     card_uid = card_uid.strip().replace(" ", "").upper()
 
@@ -45,6 +62,14 @@ def identify_student(card_uid):
 
     date = now.strftime("%Y-%m-%d")
     time_scanned = now.strftime("%H:%M:%S")
+
+    if already_attended(card_uid, date):
+        print("\nARLEADY MARKED!")
+        print(f"Name: {student_name}")
+        print(f"Date: {date}")
+        print("Attendance has already been recorded today.")
+        print("-" * 35)
+        return
 
     print("\nSTUDENT IDENTIFIED!")
     print(f"Name: {student_name}")
