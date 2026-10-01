@@ -2,6 +2,7 @@ import serial
 import time
 import csv
 import os
+import sqlite3
 from datetime import datetime
 
 SERIAL_PORT = "COM7"
@@ -9,11 +10,27 @@ BAUD_RATE = 115200
 
 ATTENDANCE_FILE = "attendance.csv"
 
-students = {
-    "A96E9504": "Student 1",
-    "AB529E04": "Student 2",
-    "594AB9D4": "Student 3",
-}
+DATABASE = "attendance.db"
+
+
+
+
+def get_student(card_uid):
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT id, name FROM students WHERE card_uid = ?",
+        (card_uid,)
+    )
+
+    student = cursor.fetchone()
+
+    connection.close()
+
+    return student
+
+
 
 def create_attendance_file():
 
@@ -50,14 +67,17 @@ def already_attended(card_uid, today):
 def identify_student(card_uid):
     card_uid = card_uid.strip().replace(" ", "").upper()
 
-    if card_uid not in students:
+    student = get_student(card_uid)
+
+    if student is None:
         print("\nUNKOWN CARD!")
         print(f"Card UID: {card_uid}")
         print("This card is not registered.")
         print("-" * 35)
         return
 
-    student_name = students[card_uid]
+    student_id = student[0]
+    student_name = student[1]
     now = datetime.now()
 
     date = now.strftime("%Y-%m-%d")

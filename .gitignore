@@ -54,6 +54,9 @@ logs/
 serial_capture/
 
 # Attendance database exports
+*.db
+*.sqlite
+*.sqlite3
 *.db-journal
 *.sqlite-journal
 attendance_export/
