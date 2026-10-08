@@ -19,8 +19,11 @@ def get_student(card_uid):
     connection = sqlite3.connect(DATABASE)
     cursor = connection.cursor()
 
+    # rfid_uid is now a column on students directly (simplified schema).
+    # Return (id, full_name) to keep the rest of the script unchanged.
     cursor.execute(
-        "SELECT id, name FROM students WHERE card_uid = ?",
+        "SELECT id, (first_name || ' ' || last_name) AS name "
+        "FROM students WHERE rfid_uid = ?",
         (card_uid,)
     )
 
